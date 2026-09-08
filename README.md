@@ -6,7 +6,7 @@ is saved, so you can close the panel, reboot, and pick the adventure back up
 whenever you feel like it.
 
 <p align="center">
-  <img src="preview.png" width="560" alt="The Zorkmachy panel: a Zork I transcript with the status line, the input prompt, and the bar chip showing the score">
+  <img src="preview.png?v=2" width="560" alt="The Zorkmachy panel: a Zork I transcript with the status line, the input prompt, and the bar chip showing the score">
 </p>
 
 ## What's in it
@@ -24,7 +24,7 @@ whenever you feel like it.
   in the status line. Up and Down recall earlier commands.
 
 <p align="center">
-  <img src="preview1.png" width="560" alt="The game picker: three cards for Zork I, II and III with each one's room, score and moves">
+  <img src="preview1.png?v=2" width="560" alt="The game picker: three cards for Zork I, II and III with each one's room, score and moves">
 </p>
 
 ## Install
