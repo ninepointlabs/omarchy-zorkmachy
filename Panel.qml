@@ -161,12 +161,20 @@ Panel {
     })
   }
 
-  // Only stand up a private service once the bar is wired in and the shell
-  // really has no shared one.
+  // The shell mounts one shared service per plugin, but it can appear a
+  // moment after the panels do. Only fall back to a private service if none
+  // has shown up after a grace period, and step aside as soon as one does,
+  // so two monitors never end up playing two different games.
   Service {
     id: localService
-    active: root.bar !== null && root.sharedService === null
+    active: false
   }
+  Timer {
+    interval: 2500
+    running: root.bar !== null && root.sharedService === null && !localService.active
+    onTriggered: if (root.sharedService === null) localService.active = true
+  }
+  onSharedServiceChanged: if (sharedService !== null && localService.active) localService.active = false
 
   // While the install card shows, re-check for the interpreter so finishing
   // the install in the terminal flips the panel over on its own.

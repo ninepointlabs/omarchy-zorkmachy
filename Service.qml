@@ -116,7 +116,10 @@ Item {
   onDirReadyChanged: if (dirReady && pendingSave) { pendingSave = false; save() }
 
   Component.onCompleted: if (active) mkdir.running = true
-  onActiveChanged: if (active && !loaded && !mkdir.running) mkdir.running = true
+  onActiveChanged: {
+    if (active && !loaded && !mkdir.running) mkdir.running = true
+    if (!active) stop()
+  }
 
   function commit() {
     games = Object.assign({}, games)
