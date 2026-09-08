@@ -56,7 +56,7 @@ default); use `left` or `center` if you prefer.
 ```bash
 omarchy plugin remove ninepointlabs.zorkmachy
 rm -rf ~/.local/state/omarchy-zorkmachy      # optional: saves and transcripts
-sudo pacman -Rns frotz-dumb                  # optional: the interpreter
+omarchy pkg drop frotz-dumb                  # optional: the interpreter
 ```
 
 ## Playing
