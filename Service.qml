@@ -121,8 +121,16 @@ Item {
     if (!active) stop()
   }
 
+  // QML only notices a `var` property when its value is a different object,
+  // so every commit replaces the current game (and its transcript array)
+  // with fresh copies. Mutating in place would leave the panels showing the
+  // previous move.
   function commit() {
-    games = Object.assign({}, games)
+    var next = Object.assign({}, games)
+    for (var key in next) {
+      if (next[key] && next[key].transcript) next[key] = Object.assign({}, next[key], { transcript: next[key].transcript.slice() })
+    }
+    games = next
     revision += 1
     save()
   }

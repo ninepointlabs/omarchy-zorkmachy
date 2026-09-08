@@ -85,7 +85,8 @@ BarWidget {
     function status(): string {
       if (!root.service) return "{}"
       var g = root.service.currentGame
-      return JSON.stringify({ game: root.service.current, phase: root.service.phase, ready: root.service.ready, interpreter: root.service.interpreterAvailable, room: g ? g.room : "", score: g ? g.score : 0, moves: g ? g.moves : 0, lines: g ? g.transcript.length : 0 })
+      var shared = root.bar && root.bar.shell && typeof root.bar.shell.serviceFor === "function" ? root.bar.shell.serviceFor(root.moduleName) : null
+      return JSON.stringify({ game: root.service.current, phase: root.service.phase, ready: root.service.ready, shared: root.service === shared, interpreter: root.service.interpreterAvailable, room: g ? g.room : "", score: g ? g.score : 0, moves: g ? g.moves : 0, lines: g ? g.transcript.length : 0 })
     }
     function select(key: string): string { if (!root.service) return "no service"; root.service.selectGame(key); return "ok" }
     function picker(): string { if (!root.service) return "no service"; root.service.showPicker(); return "ok" }
