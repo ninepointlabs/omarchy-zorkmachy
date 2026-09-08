@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "ninepointlabs.zorkmachy",
+  "name": "Zorkmachy",
+  "version": "0.1.0",
+  "author": "Ninepoint Labs",
+  "license": "MIT",
+  "description": "Zork I, II and III in a bar panel. The original Infocom games (MIT-licensed by Microsoft) run on the frotz Z-machine interpreter; every move is saved, so you can pick up the adventure whenever you like.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Zorkmachy",
+    "description": "Play Zork I, II and III from the bar. Auto-saves after every move.",
+    "category": "Fun",
+    "aliases": [
+      "zork",
+      "zorkmachy",
+      "infocom",
+      "adventure"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "showStatus": true
+    },
+    "schema": [
+      {
+        "key": "showStatus",
+        "type": "boolean",
+        "label": "Show the current game and score next to the icon",
+        "defaultValue": true
+      }
+    ]
+  }
+}
