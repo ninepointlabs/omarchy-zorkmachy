@@ -152,3 +152,82 @@ function sanitizeState(data) {
 function isInt(v, lo, hi) {
   return typeof v === "number" && isFinite(v) && Math.floor(v) === v && v >= lo && v <= hi
 }
+
+// ---------------------------------------------------------------------------
+// About. The version is read from manifest.json and the licence texts from
+// LICENSE and games/LICENSE at run time; these are the facts that live
+// nowhere else.
+// ---------------------------------------------------------------------------
+
+var ABOUT = {
+  name: "Zorkmachy",
+  tagline: "Zork I, II and III in the Omarchy bar, saved after every move",
+  organization: "Nine Point Labs",
+  supportEmail: "help@ninepointlabs.com",
+  created: "September 2026", // first commit: 2026-09-08
+  license: "MIT License",
+  copyright: "© 2026 Nine Point Labs", // as written in LICENSE
+  games: "Zork I, II and III © Infocom, Inc., published by Microsoft under the MIT License (© 2025 Microsoft), "
+    + "from the historicalsource/zork1, zork2 and zork3 repositories (commits in games/SOURCES.txt).",
+  interpreter: "frotz (dfrotz, Arch package frotz-dumb), GNU GPL, by Stefan Jokisch and David Griffith; "
+    + "installed separately, not bundled."
+}
+
+// Must stay true to the code: no network (test/about.js fails if a host
+// appears in the sources without being named here), one child process
+// (/usr/bin/dfrotz, jailed with -R), files only under the state dir.
+var PRIVACY = "No account, no network connections and no telemetry. The games run in dfrotz on this computer, "
+  + "which may only read and write ~/.local/state/omarchy-zorkmachy/. That folder holds state.json (each game's "
+  + "transcript, room, score and moves) and the games' own save files, zork1.qzl etc., with ordinary permissions "
+  + "(folder 0755, files 0644 under the usual umask); delete it to forget everything. The widget's one setting is saved in ~/.config/omarchy/shell.json."
+
+// "0.1.0" from manifest.json's text, or "" if it cannot be read.
+function manifestVersion(text) {
+  var parsed
+  try { parsed = JSON.parse(String(text || "")) } catch (e) { return "" }
+  var version = parsed && typeof parsed.version === "string" ? parsed.version : ""
+  return /^[0-9A-Za-z.+-]{1,32}$/.test(version) ? version : ""
+}
+
+// Highest minor version `has(major, minor)` accepts, as "major.minor"
+// (Quickshell.hasVersion / hasQtVersion only answer yes or no), or "".
+function probedVersion(has, major) {
+  if (typeof has !== "function" || !has(major, 0)) return ""
+  var minor = 0
+  while (minor < 99 && has(major, minor + 1)) minor++
+  return major + "." + minor
+}
+
+// "2.55" from the first line of `dfrotz -v` ("FROTZ V2.55  Dumb interface."), or "".
+function frotzVersion(text) {
+  var m = /FROTZ V([0-9]{1,3}(?:\.[0-9]{1,3}){1,2})\b/.exec(String(text || ""))
+  return m ? m[1] : ""
+}
+
+// One paragraph per line, so a licence wraps to the panel width.
+function reflowLicense(text) {
+  var paragraphs = String(text || "").replace(/\r/g, "").split(/\n\s*\n/)
+  var out = []
+  for (var i = 0; i < paragraphs.length; i++) {
+    var p = paragraphs[i].replace(/\s+/g, " ").trim()
+    if (p !== "") out.push(p)
+  }
+  return out.join("\n\n")
+}
+
+function builtWith(quickshell, qt, frotz) {
+  return ["Quickshell " + (quickshell || "?"), "Qt " + (qt || "?"),
+    "frotz " + (frotz || "(not installed)")].join(", ")
+}
+
+// Version details for a support email.
+function aboutDetails(version, quickshell, qt, frotz, desktop) {
+  return ABOUT.name + " " + (version || "unknown version") + "\n"
+    + builtWith(quickshell, qt, frotz) + "\n"
+    + (desktop || "unknown desktop")
+}
+
+function supportMailto(version, details) {
+  return "mailto:" + ABOUT.supportEmail + "?subject=" + encodeURIComponent(ABOUT.name + " " + (version || ""))
+    + "&body=" + encodeURIComponent("\n\n--\n" + details)
+}

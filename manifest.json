@@ -3,7 +3,7 @@
   "id": "ninepointlabs.zorkmachy",
   "name": "Zorkmachy",
   "version": "0.1.0",
-  "author": "Ninepoint Labs",
+  "author": "Nine Point Labs",
   "license": "MIT",
   "description": "Zork I, II and III in a bar panel. The original Infocom games (MIT-licensed by Microsoft) run on the frotz Z-machine interpreter; every move is saved, so you can pick up the adventure whenever you like.",
   "kinds": [

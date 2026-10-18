@@ -81,6 +81,7 @@ BarWidget {
     function show(): void { root.open() }
     function hide(): void { root.close() }
     function toggle(): void { root.togglePanel() }
+    function about(): void { root.open(); if (panelLoader.item) panelLoader.item.showAboutPage() }
     function isOpen(): string { return root.anyOpened() ? "true" : "false" }
     function status(): string {
       if (!root.service) return "{}"

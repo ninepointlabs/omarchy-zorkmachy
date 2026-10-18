@@ -45,6 +45,7 @@ Panel {
   readonly property string serviceError: service ? service.error : ""
 
   readonly property string mode: {
+    if (showAbout) return "about"
     if (!service || !service.loaded) return "loading"
     if (service.interpreterProbed && !service.interpreterAvailable) return "setup"
     if (current === "") return "picker"
@@ -52,6 +53,60 @@ Panel {
   }
 
   property string confirmRestartKey: ""
+
+  // ---------------------------------------------------------------- about --
+  // The About page replaces the panel's content (info button or the `about`
+  // IPC call; Back or Escape returns, closing the panel resets it). Its facts
+  // are read from the plugin's own files, only once it is shown.
+  property bool showAbout: false
+  property string licenseShown: ""   // "" | "plugin" | "games"
+  property string copiedLabel: ""
+  property string frotzVersion: ""
+
+  readonly property string pluginDir: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/$/, "")
+  readonly property string version: Games.manifestVersion(manifestFile.loaded ? manifestFile.text() : "")
+  readonly property string quickshellVersion: Games.probedVersion(function(a, b) { return Quickshell.hasVersion(a, b) }, 0)
+  readonly property string qtVersion: Games.probedVersion(function(a, b) { return Quickshell.hasQtVersion(a, b) }, 6)
+  readonly property string aboutDetails: Games.aboutDetails(root.version, root.quickshellVersion, root.qtVersion, root.frotzVersion,
+    (Quickshell.env("XDG_CURRENT_DESKTOP") || "unknown desktop") + ", " + Qt.platform.pluginName)
+
+  FileView { id: manifestFile; path: root.showAbout ? root.pluginDir + "/manifest.json" : ""; printErrors: false }
+  FileView { id: licenseFile; path: root.licenseShown === "plugin" ? root.pluginDir + "/LICENSE" : (root.licenseShown === "games" ? root.pluginDir + "/games/LICENSE" : ""); printErrors: false }
+
+  // `dfrotz -v` only prints its version and exits.
+  Process {
+    id: frotzProbe
+    command: [root.service ? root.service.interpreter : "/usr/bin/dfrotz", "-v"]
+    running: false
+    stdout: SplitParser {
+      onRead: function(line) { if (root.frotzVersion === "") root.frotzVersion = Games.frotzVersion(line) }
+    }
+  }
+
+  function showAboutPage() {
+    confirmRestartKey = ""
+    licenseShown = ""
+    showAbout = true
+    if (frotzVersion === "" && !frotzProbe.running && service && service.interpreterAvailable) frotzProbe.running = true
+    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+  }
+
+  function closeAbout() {
+    showAbout = false
+    licenseShown = ""
+    Qt.callLater(function() {
+      if (root.mode === "game") { inputField.forceActiveFocus(); root.scrollToEnd() }
+      else keyCatcher.forceActiveFocus()
+    })
+  }
+
+  function copyText(text, label) {
+    Quickshell.clipboardText = text
+    copiedLabel = label
+    copiedTimer.restart()
+  }
+
+  Timer { id: copiedTimer; interval: 1500; onTriggered: root.copiedLabel = "" }
   property int historyIndex: -1
   property string historyDraft: ""
 
@@ -153,7 +208,7 @@ Panel {
 
   onOpenedChanged: {
     confirmRestartKey = ""
-    if (!opened) return
+    if (!opened) { showAbout = false; licenseShown = ""; return }
     if (service && service.interpreterProbed && !service.interpreterAvailable) service.probeInterpreter()
     Qt.callLater(function() {
       if (root.mode === "game") { inputField.forceActiveFocus(); root.scrollToEnd() }
@@ -187,6 +242,37 @@ Panel {
 
   // --------------------------------------------------------------- pieces --
 
+  component AboutLabel: Text {
+    textFormat: Text.PlainText
+    color: root.dim
+    font.family: root.fontFamily
+    font.pixelSize: Style.font.caption
+    wrapMode: Text.Wrap
+  }
+
+  component AboutValue: Text {
+    textFormat: Text.PlainText
+    color: root.foreground
+    font.family: root.fontFamily
+    font.pixelSize: Style.font.bodySmall
+    wrapMode: Text.Wrap
+  }
+
+  component AboutLink: Text {
+    signal activated()
+    textFormat: Text.PlainText
+    color: root.accent
+    font.family: root.fontFamily
+    font.pixelSize: Style.font.caption
+
+    MouseArea {
+      anchors.fill: parent
+      anchors.margins: -Style.space(4)
+      cursorShape: Qt.PointingHandCursor
+      onClicked: parent.activated()
+    }
+  }
+
   KeyboardPanel {
     id: panel
     anchorItem: root.anchorItem
@@ -203,6 +289,7 @@ Panel {
       blocked: inputField.activeFocus
       onCloseRequested: {
         if (root.confirmRestartKey !== "") { root.confirmRestartKey = ""; return }
+        if (root.showAbout) { root.closeAbout(); return }
         root.close()
       }
       onTabRequested: function(direction) { root.switchPanel(direction) }
@@ -260,7 +347,7 @@ Panel {
               visible: text !== ""
               width: parent.width
               textFormat: Text.PlainText
-              text: root.mode === "game" ? root.statusText : (root.mode === "picker" ? "Which Zork, adventurer?" : "")
+              text: root.mode === "game" ? root.statusText : (root.mode === "picker" ? "Which Zork, adventurer?" : (root.mode === "about" ? "About" : ""))
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
@@ -274,6 +361,21 @@ Panel {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Style.space(4)
 
+            Button {
+              objectName: "aboutBack"
+              visible: root.mode === "about"
+              iconText: "󰁍"
+              text: "Back"
+              tooltipText: "Back (Esc)"
+              foreground: root.foreground
+              accent: root.accent
+              fontFamily: root.fontFamily
+              fontSize: Style.font.caption
+              iconSize: Style.font.body
+              horizontalPadding: Style.space(8)
+              verticalPadding: Style.space(3)
+              onClicked: root.closeAbout()
+            }
             Button {
               visible: root.mode === "game" && root.confirmRestartKey === ""
               iconText: "󰅁"
@@ -332,10 +434,184 @@ Panel {
               verticalPadding: Style.space(3)
               onClicked: root.confirmRestartKey = ""
             }
+            PanelActionButton {
+              objectName: "aboutButton"
+              visible: root.mode !== "about" && root.confirmRestartKey === ""
+              anchors.verticalCenter: parent.verticalCenter
+              iconText: "󰋽"
+              tooltipText: "About Zorkmachy"
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              onClicked: root.showAboutPage()
+            }
           }
         }
 
         PanelSeparator { foreground: root.foreground }
+
+        // --------------------------------------------------------- about --
+        Column {
+          objectName: "aboutColumn"
+          visible: root.mode === "about"
+          width: parent.width
+          spacing: Style.space(10)
+
+          Row {
+            width: parent.width
+            spacing: Style.space(12)
+
+            Text {
+              id: aboutIcon
+              textFormat: Text.PlainText
+              text: "󰆍"
+              color: root.accent
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.display
+              anchors.verticalCenter: parent.verticalCenter
+            }
+            Column {
+              width: parent.width - aboutIcon.width - parent.spacing
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: Style.space(2)
+              Text {
+                textFormat: Text.PlainText
+                text: Games.ABOUT.name
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+              }
+              AboutValue { width: parent.width; text: Games.ABOUT.tagline }
+              AboutLabel { objectName: "aboutVersion"; width: parent.width; text: "Version " + (root.version || "unknown") }
+            }
+          }
+
+          Grid {
+            id: aboutFacts
+            width: parent.width
+            columns: 2
+            columnSpacing: Style.space(12)
+            rowSpacing: Style.space(8)
+            readonly property real labelWidth: Style.space(84)
+            readonly property real valueWidth: width - labelWidth - columnSpacing
+
+            AboutLabel { width: aboutFacts.labelWidth; text: "MADE BY" }
+            AboutValue { width: aboutFacts.valueWidth; text: Games.ABOUT.organization }
+
+            AboutLabel { width: aboutFacts.labelWidth; text: "CREATED" }
+            AboutValue { width: aboutFacts.valueWidth; text: Games.ABOUT.created }
+
+            AboutLabel { width: aboutFacts.labelWidth; text: "LICENSE" }
+            Column {
+              width: aboutFacts.valueWidth
+              spacing: Style.space(2)
+              AboutValue { width: parent.width; text: Games.ABOUT.license + ", " + Games.ABOUT.copyright }
+              AboutLink {
+                objectName: "aboutLicenseLink"
+                text: root.licenseShown === "plugin" ? "Hide license" : "Read license"
+                onActivated: root.licenseShown = root.licenseShown === "plugin" ? "" : "plugin"
+              }
+            }
+
+            AboutLabel { width: aboutFacts.labelWidth; text: "THE GAMES" }
+            Column {
+              width: aboutFacts.valueWidth
+              spacing: Style.space(2)
+              AboutValue { objectName: "aboutGames"; width: parent.width; text: Games.ABOUT.games }
+              AboutLink {
+                objectName: "aboutGamesLicenseLink"
+                text: root.licenseShown === "games" ? "Hide the games' license" : "Read the games' license"
+                onActivated: root.licenseShown = root.licenseShown === "games" ? "" : "games"
+              }
+            }
+
+            AboutLabel { width: aboutFacts.labelWidth; text: "SUPPORT" }
+            Column {
+              width: aboutFacts.valueWidth
+              spacing: Style.space(4)
+              AboutValue { width: parent.width; text: Games.ABOUT.supportEmail }
+              Flow {
+                width: parent.width
+                spacing: Style.space(6)
+                Button {
+                  text: "Email"
+                  tooltipText: "Opens your mail app with the version details filled in"
+                  bordered: true
+                  foreground: root.foreground
+                  accent: root.accent
+                  fontFamily: root.fontFamily
+                  fontSize: Style.font.caption
+                  horizontalPadding: Style.space(8)
+                  verticalPadding: Style.space(3)
+                  onClicked: Qt.openUrlExternally(Games.supportMailto(root.version, root.aboutDetails))
+                }
+                Button {
+                  objectName: "aboutCopyEmail"
+                  text: root.copiedLabel === "email" ? "Copied" : "Copy"
+                  bordered: true
+                  foreground: root.foreground
+                  accent: root.accent
+                  fontFamily: root.fontFamily
+                  fontSize: Style.font.caption
+                  horizontalPadding: Style.space(8)
+                  verticalPadding: Style.space(3)
+                  onClicked: root.copyText(Games.ABOUT.supportEmail, "email")
+                }
+                Button {
+                  objectName: "aboutCopyDetails"
+                  text: root.copiedLabel === "details" ? "Copied" : "Copy version details"
+                  bordered: true
+                  foreground: root.foreground
+                  accent: root.accent
+                  fontFamily: root.fontFamily
+                  fontSize: Style.font.caption
+                  horizontalPadding: Style.space(8)
+                  verticalPadding: Style.space(3)
+                  onClicked: root.copyText(root.aboutDetails, "details")
+                }
+              }
+            }
+
+            AboutLabel { width: aboutFacts.labelWidth; text: "PRIVACY" }
+            AboutValue { objectName: "aboutPrivacy"; width: aboutFacts.valueWidth; text: Games.PRIVACY }
+
+            AboutLabel { width: aboutFacts.labelWidth; text: "BUILT WITH" }
+            Column {
+              width: aboutFacts.valueWidth
+              spacing: Style.space(2)
+              AboutValue { objectName: "aboutBuiltWith"; width: parent.width; text: Games.builtWith(root.quickshellVersion, root.qtVersion, root.frotzVersion) }
+              AboutLabel { width: parent.width; text: "Interpreter: " + Games.ABOUT.interpreter }
+            }
+          }
+
+          Rectangle {
+            visible: root.licenseShown !== ""
+            width: parent.width
+            height: Style.space(200)
+            radius: Style.cornerRadius
+            color: Style.normalFillFor(root.foreground, root.accent)
+            border.width: Style.spacing.hairline
+            border.color: Style.normalBorderFor(root.foreground, root.accent)
+            clip: true
+
+            Flickable {
+              id: licenseFlick
+              anchors.fill: parent
+              anchors.margins: Style.space(10)
+              contentWidth: width
+              contentHeight: licenseText.implicitHeight
+              boundsBehavior: Flickable.StopAtBounds
+
+              AboutLabel {
+                id: licenseText
+                objectName: "aboutLicenseText"
+                width: licenseFlick.width
+                text: licenseFile.loaded ? Games.reflowLicense(licenseFile.text())
+                  : (root.licenseShown === "games" ? "See games/LICENSE in the plugin folder." : "See LICENSE in the plugin folder.")
+              }
+            }
+          }
+        }
 
         // ------------------------------------------------------- loading --
         Text {
