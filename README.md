@@ -78,6 +78,18 @@ Click the console glyph in the bar.
 
 The bar chip shows which Zork is open and your score.
 
+## About
+
+The 󰋽 button at the top right of the panel opens the About page: version,
+Nine Point Labs, the plugin's licence and the games' licence (both readable in
+place), credits for Infocom, Microsoft and frotz, what the plugin does with
+your data, and the support address,
+[help@ninepointlabs.com](mailto:help@ninepointlabs.com), with *Email*, *Copy*
+and *Copy version details* buttons. **Back** or Escape returns to the game,
+and closing the panel resets it. Typing `about` at the game's prompt still
+goes to Zork. From a script:
+`qs -p /usr/share/omarchy/shell ipc call ninepointlabs.zorkmachy about`.
+
 ## Settings
 
 In `~/.config/omarchy/shell.json`, on the widget's entry:
@@ -112,7 +124,9 @@ In `~/.config/omarchy/shell.json`, on the widget's entry:
 - `Games.js`: game metadata and the parsing of dfrotz's output.
   `Service.qml` drives the interpreter and owns the saves. `Panel.qml` is the
   screen, `BarWidget.qml` the chip.
-- `node test/parse.js` checks the parser against captured dfrotz output.
+- `node test/parse.js` checks the parser against captured dfrotz output;
+  `node test/about.js` checks the About page's facts and that every network
+  host in the code is named in its privacy statement.
 
 ## IPC
 
@@ -121,11 +135,12 @@ omarchy-shell shell summon ninepointlabs.zorkmachy '{}'     # open
 omarchy-shell shell hide ninepointlabs.zorkmachy             # close
 qs -p /usr/share/omarchy/shell ipc call ninepointlabs.zorkmachy status
 qs -p /usr/share/omarchy/shell ipc call ninepointlabs.zorkmachy send "open mailbox"
+qs -p /usr/share/omarchy/shell ipc call ninepointlabs.zorkmachy about    # open on the About page
 ```
 
 ## Licence
 
-The plugin is MIT (Ninepoint Labs). Zork I, II and III are © Infocom, Inc.,
+The plugin is MIT (Nine Point Labs). Zork I, II and III are © Infocom, Inc.,
 licensed under the MIT licence by Microsoft; see `games/LICENSE`. "Zork" is
 a trademark of its owner; this is a fan-made player, not an official
 release.
